@@ -1,0 +1,7 @@
+{
+  "name": "One Photo Edit",
+  "description": "Seamlessly analyze and edit text within your images using advanced AI. Maintain original style and background for a perfect, unedited look.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
