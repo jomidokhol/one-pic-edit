@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { DetectedText } from "../types";
 
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  return new GoogleGenAI({ apiKey:'AIzaSyDGqhNJvy5jliliZCMlFNtwQGQUT9lAqnc'});
 };
 
 /**
