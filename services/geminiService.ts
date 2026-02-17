@@ -3,8 +3,9 @@ import { DetectedText } from "../types";
 
 const getAIClient = () => {
   const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey.includes('AIzaSyDGqhNJvy5jliliZCMlFNtwQGQUT9lAqnc')) {
-    throw new Error("Your API key is missing or has been disabled (leaked). Please generate a NEW key in AI Studio and update your Vercel Environment Variables.");
+  // Note: We don't hardcode the leaked key here anymore, we check for existence
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please set the API_KEY environment variable in Vercel.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -70,10 +71,7 @@ export const analyzeImageText = async (base64Image: string): Promise<DetectedTex
       confidence: 1.0,
     }));
   } catch (error: any) {
-    if (error.message?.includes("leaked") || error.status === "PERMISSION_DENIED") {
-      throw new Error("SECURITY ALERT: Your API key was disabled because it was leaked. Please create a NEW key at ai.google.dev and update your environment variables.");
-    }
-    console.error("Gemini Error:", error);
+    handleGeminiError(error);
     throw error;
   }
 };
@@ -96,10 +94,10 @@ export const editImageText = async (
     const ai = getAIClient();
     const base64Data = base64Image.split(',')[1];
 
-    const fontInstruction = font !== "original" ? `Use font style: "${font}".` : "Match original font.";
-    const colorInstruction = color !== "original" ? `Use hex color: "${color}".` : "Match original color.";
-    const strokeInstruction = strokeColor !== "none" ? `Add ${strokeWidth}px stroke of color ${strokeColor}.` : "";
-    const sizeInstruction = `Font size: ${fontSize}% of original.`;
+    const fontInstruction = font !== "original" ? `Use font: "${font}".` : "Match font.";
+    const colorInstruction = color !== "original" ? `Color: "${color}".` : "Match color.";
+    const strokeInstruction = strokeColor !== "none" ? `Stroke: ${strokeWidth}px ${strokeColor}.` : "";
+    const sizeInstruction = `Size: ${fontSize}%.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -112,7 +110,7 @@ export const editImageText = async (
             },
           },
           {
-            text: `Edit this image. Replace "${originalText}" at [${box.ymin}, ${box.xmin}, ${box.ymax}, ${box.xmax}] with "${newText}". ${fontInstruction} ${colorInstruction} ${strokeInstruction} ${sizeInstruction} Maintain background and lighting perfectly.`,
+            text: `Replace "${originalText}" at [${box.ymin}, ${box.xmin}, ${box.ymax}, ${box.xmax}] with "${newText}". ${fontInstruction} ${colorInstruction} ${strokeInstruction} ${sizeInstruction} Clean result.`,
           },
         ],
       }
@@ -128,9 +126,29 @@ export const editImageText = async (
     }
     return null;
   } catch (error: any) {
-    if (error.message?.includes("leaked")) {
-      throw new Error("SECURITY ALERT: Leaked API key. Update your variables on Vercel.");
-    }
+    handleGeminiError(error);
     throw error;
+  }
+};
+
+/**
+ * Centralized error handling for common Gemini API issues.
+ */
+const handleGeminiError = (error: any) => {
+  console.error("Gemini API Error Detail:", error);
+  
+  const status = error.status || error.code;
+  const message = error.message || "";
+
+  if (status === 429 || message.includes("quota") || message.includes("RESOURCE_EXHAUSTED")) {
+    throw new Error("QUOTA EXCEEDED: You've reached the free tier limit for the Gemini API. Please wait a minute or upgrade to a paid plan at ai.google.dev.");
+  }
+  
+  if (status === 403 || message.includes("leaked") || message.includes("PERMISSION_DENIED")) {
+    throw new Error("API KEY ERROR: Your key is either invalid, leaked, or restricted. Please check your Vercel Environment Variables.");
+  }
+
+  if (message.includes("safety")) {
+    throw new Error("SAFETY BLOCK: The AI blocked this request because of content safety filters. Try a different image or text.");
   }
 };
