@@ -2,7 +2,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { DetectedText } from "../types";
 
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please set the API_KEY environment variable in Vercel.");
+  }
+  return new GoogleGenAI({ apiKey });
 };
 
 /**
@@ -53,7 +57,12 @@ export const analyzeImageText = async (base64Image: string): Promise<DetectedTex
 
   try {
     const textOutput = response.text;
-    const rawJson = JSON.parse(textOutput || '[]');
+    if (!textOutput) throw new Error("Empty response from AI");
+    
+    // Strip potential markdown code blocks if the model includes them erroneously
+    const cleanJson = textOutput.replace(/```json|```/g, "").trim();
+    const rawJson = JSON.parse(cleanJson || '[]');
+    
     return rawJson.map((item: any, index: number) => ({
       id: `text-${index}`,
       text: item.text,
@@ -67,7 +76,7 @@ export const analyzeImageText = async (base64Image: string): Promise<DetectedTex
     }));
   } catch (error) {
     console.error("Failed to parse Gemini OCR response:", error);
-    return [];
+    throw error; // Rethrow to let the UI catch and display the error
   }
 };
 

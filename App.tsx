@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { AppState, DetectedText } from './types';
 import { analyzeImageText, editImageText } from './services/geminiService';
@@ -49,10 +48,14 @@ const App: React.FC = () => {
           detectedTexts: results,
           processing: { ...prev.processing, isAnalyzing: false }
         }));
-      } catch (err) {
+      } catch (err: any) {
         setState(prev => ({
           ...prev,
-          processing: { ...prev.processing, isAnalyzing: false, error: "Failed to analyze image. Please try again." }
+          processing: { 
+            ...prev.processing, 
+            isAnalyzing: false, 
+            error: err.message || "Failed to analyze image. Check your API key and connection." 
+          }
         }));
       }
     };
@@ -86,12 +89,16 @@ const App: React.FC = () => {
           };
         });
       } else {
-        throw new Error("No image generated");
+        throw new Error("The AI was unable to generate an edited image for this area.");
       }
-    } catch (err) {
+    } catch (err: any) {
       setState(prev => ({
         ...prev,
-        processing: { ...prev.processing, isEditing: false, error: "Editing failed. The AI couldn't process this area with these settings." }
+        processing: { 
+          ...prev.processing, 
+          isEditing: false, 
+          error: err.message || "Editing failed. The AI couldn't process this area." 
+        }
       }));
     }
   }, [state.originalImage, state.history, state.historyIndex, state.detectedTexts, currentImage]);
@@ -248,7 +255,7 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {/* Download and Options Bar - Moved out of header */}
+            {/* Download and Options Bar */}
             {currentImage && (
               <div className="bg-white p-4 sm:p-6 rounded-3xl shadow-xl border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
