@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { DetectedText } from "../types";
 
@@ -53,7 +52,8 @@ export const analyzeImageText = async (base64Image: string): Promise<DetectedTex
   });
 
   try {
-    const rawJson = JSON.parse(response.text || '[]');
+    const textOutput = response.text;
+    const rawJson = JSON.parse(textOutput || '[]');
     return rawJson.map((item: any, index: number) => ({
       id: `text-${index}`,
       text: item.text,
@@ -117,10 +117,10 @@ export const editImageText = async (
     }
   });
 
-  const candidate = response.candidates?.[0];
-  if (candidate?.content?.parts) {
-    for (const part of candidate.content.parts) {
-      if (part.inlineData) {
+  const parts = response.candidates?.[0]?.content?.parts;
+  if (parts) {
+    for (const part of parts) {
+      if (part.inlineData?.data) {
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
